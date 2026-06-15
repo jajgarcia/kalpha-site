@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalpha — a living census of iron in the X-ray reflection literature</title>
+<meta name="description" content="Kalpha is a curated, queryable database of iron abundance and spin measurements from the RELXILL-family black-hole reflection literature, built by Javier García and Juan González.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#090d15; --bg2:#0e1421; --bg3:#141c2c; --line:rgba(255,255,255,.08);
+    --gold:#f4c842; --gold-dim:#caa531; --cyan:#5bc8f5;
+    --text:#e9eef6; --muted:#93a3ba; --faint:#5f6e85;
+    --xrb:#f59e0b; --agn:#0ea5e9;
+    --maxw:1080px;
+    --serif:'Space Grotesk',system-ui,sans-serif;
+    --sans:'Inter',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  body{
+    background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 1.5rem}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan)}
+  h2{font-family:var(--serif);font-weight:600;font-size:clamp(1.6rem,3.4vw,2.4rem);letter-spacing:-.01em;line-height:1.15}
+  h3{font-family:var(--serif);font-weight:500;font-size:1.05rem;letter-spacing:-.01em}
+  p.lead{font-size:1.08rem;color:var(--muted);max-width:62ch}
+  section{padding:5.5rem 0;border-top:1px solid var(--line)}
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;background:rgba(9,13,21,.78);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+  .brand{font-family:var(--serif);font-weight:700;font-size:1.15rem;color:var(--gold);letter-spacing:-.01em}
+  .brand span{color:var(--text);opacity:.5;font-weight:500}
+  .navlinks{display:flex;gap:1.6rem;font-size:.9rem;color:var(--muted)}
+  .navlinks a:hover{color:var(--text)}
+  .navlinks .gh{color:var(--gold)}
+  @media (max-width:720px){.navlinks a:not(.gh){display:none}}
+
+  /* hero */
+  .hero{padding:4.5rem 0 4rem;border-top:none;position:relative}
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:2.5rem;align-items:center}
+  @media (max-width:860px){.hero-grid{grid-template-columns:1fr;gap:1.5rem}}
+  .hero h1{font-family:var(--serif);font-weight:700;font-size:clamp(3rem,8vw,5.2rem);line-height:.95;letter-spacing:-.03em;margin:.6rem 0 .3rem}
+  .hero h1 .a{color:var(--gold)}
+  .hero .tag{font-size:1.15rem;color:var(--text);max-width:40ch;margin-bottom:1.1rem}
+  .hero .tag b{color:var(--cyan);font-weight:600}
+  .hero .sub{color:var(--muted);max-width:46ch;margin-bottom:1.6rem}
+  .cta{display:flex;gap:.8rem;flex-wrap:wrap}
+  .btn{font-family:var(--mono);font-size:.82rem;padding:.7rem 1.2rem;border-radius:8px;border:1px solid var(--line);transition:all .15s;cursor:pointer}
+  .btn.primary{background:var(--gold);color:#1a1405;border-color:var(--gold);font-weight:500}
+  .btn.primary:hover{background:#ffd95a}
+  .btn.ghost:hover{border-color:var(--gold);color:var(--gold)}
+
+  /* hero line-profile figure */
+  .profile{background:linear-gradient(180deg,var(--bg2),var(--bg));border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.1rem .7rem;position:relative}
+  .profile .cap{font-family:var(--mono);font-size:.66rem;color:var(--faint);letter-spacing:.04em;margin-top:.3rem}
+  .profile svg{display:block;width:100%;height:auto}
+  .lp-curve{fill:none;stroke:var(--gold);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
+  .lp-draw{stroke-dasharray:1400;stroke-dashoffset:1400;animation:draw 2.4s ease forwards .3s}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @media (prefers-reduced-motion:reduce){.lp-draw{animation:none;stroke-dashoffset:0}}
+
+  /* stat strip */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:2.5rem}
+  .stats .cell{background:var(--bg2);padding:1.2rem 1.3rem}
+  .stats .num{font-family:var(--serif);font-weight:600;font-size:1.9rem;color:var(--gold);letter-spacing:-.02em}
+  .stats .lbl{font-size:.82rem;color:var(--muted);margin-top:.15rem}
+  @media (max-width:640px){.stats{grid-template-columns:1fr}}
+
+  /* generic two-col */
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem}
+  @media (max-width:820px){.twocol{grid-template-columns:1fr;gap:1.6rem}}
+  .note{background:var(--bg2);border:1px solid var(--line);border-left:2px solid var(--gold);border-radius:10px;padding:1.1rem 1.3rem;font-size:.95rem;color:var(--muted)}
+  .note b{color:var(--text);font-weight:600}
+
+  /* histogram panel */
+  #explore .panel{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:1.4rem 1.4rem 1.6rem;margin-top:2rem}
+  .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:.4rem}
+  @media (max-width:640px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--bg3);border-radius:10px;padding:.8rem .9rem;text-align:center}
+  .stat .t{font-size:11px;color:var(--muted);margin-bottom:3px}
+  .stat .v{font-family:var(--serif);font-size:1.4rem;font-weight:600}
+  .stat .s{font-size:11px;color:var(--faint);margin-top:2px}
+  .vXRB{color:var(--xrb)} .vAGN{color:#38bdf8}
+  .samplenote{font-size:11px;color:var(--faint);font-style:italic;margin:.1rem 0 1.1rem}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:1.1rem}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{font-family:var(--mono);padding:5px 14px;font-size:12px;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+  .seg button.on{background:rgba(91,200,245,.14);color:var(--cyan)}
+  .chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none;font-family:var(--mono)}
+  .chk input{width:14px;height:14px;accent-color:var(--gold)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:11.5px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .sw{width:12px;height:12px;border-radius:2px;display:inline-block}
+  .chartbox{position:relative;width:100%;height:380px}
+  .foot{font-size:11px;color:var(--faint);margin-top:.9rem;line-height:1.6}
+  #stamp{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:.5rem}
+
+  /* pipeline */
+  .steps{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:2.2rem}
+  @media (max-width:820px){.steps{grid-template-columns:1fr}}
+  .step{background:var(--bg2);padding:1.3rem 1.2rem}
+  .step .n{font-family:var(--mono);font-size:.72rem;color:var(--gold)}
+  .step h3{margin:.4rem 0 .35rem}
+  .step p{font-size:.86rem;color:var(--muted)}
+
+  /* tool cards */
+  .tools{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:2rem}
+  @media (max-width:760px){.tools{grid-template-columns:1fr}}
+  .tool{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.2rem;transition:border-color .15s}
+  .tool:hover{border-color:rgba(244,200,66,.4)}
+  .tool code{font-family:var(--mono);font-size:.82rem;color:var(--gold)}
+  .tool p{font-size:.88rem;color:var(--muted);margin-top:.35rem}
+
+  /* schema table */
+  table{width:100%;border-collapse:collapse;margin-top:1.8rem;font-size:.88rem}
+  th,td{text-align:left;padding:.6rem .8rem;border-bottom:1px solid var(--line)}
+  th{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  td code{font-family:var(--mono);font-size:.82rem;color:var(--cyan)}
+  td:last-child{color:var(--muted)}
+
+  /* connect */
+  pre{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin-top:1.4rem}
+  code.block{font-family:var(--mono);font-size:.82rem;color:var(--text);line-height:1.7;white-space:pre}
+  .endpoint{font-family:var(--mono);font-size:.95rem;color:var(--gold);word-break:break-all}
+
+  /* team */
+  .people{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-top:2rem}
+  @media (max-width:640px){.people{grid-template-columns:1fr}}
+  .person{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:1.2rem 1.3rem}
+  .person .nm{font-family:var(--serif);font-weight:600;font-size:1.05rem}
+  .person .rl{font-size:.85rem;color:var(--cyan);margin:.15rem 0 .4rem;font-family:var(--mono)}
+  .person p{font-size:.86rem;color:var(--muted)}
+
+  footer{border-top:1px solid var(--line);padding:2.5rem 0;color:var(--faint);font-size:.85rem}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+  footer a:hover{color:var(--gold)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand">Kalpha<span> / Fe Kα census</span></div>
+    <div class="navlinks">
+      <a href="#why">Motivation</a>
+      <a href="#explore">Explore</a>
+      <a href="#build">Architecture</a>
+      <a href="#connect">Connect</a>
+      <a href="#" class="gh" id="ghTop">GitHub →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Reflection-spectroscopy literature census</div>
+      <h1>K<span class="a">alpha</span></h1>
+      <p class="tag">A living, queryable census of <b>iron abundance</b> and <b>black-hole spin</b> across the RELXILL reflection literature.</p>
+      <p class="sub">Named for the iron Kα line — the fluorescent signature at the heart of X-ray reflection — Kalpha turns thousands of scattered published fits into one reproducible, machine-readable database.</p>
+      <div class="cta">
+        <a href="#explore" class="btn primary">Explore the data ↓</a>
+        <a href="#" class="btn ghost" id="ghHero">View on GitHub</a>
+      </div>
+    </div>
+
+    <div class="profile reveal">
+      <!-- Signature: relativistic Fe Kα line profile (broad red wing, blue horn, sharp cutoff) -->
+      <svg viewBox="0 0 600 270" role="img" aria-label="A broad, asymmetric relativistic iron K-alpha emission line profile.">
+        <defs>
+          <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f4c842" stop-opacity=".30"/>
+            <stop offset="1" stop-color="#f4c842" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <!-- axes -->
+        <line x1="55" y1="235" x2="575" y2="235" stroke="rgba(255,255,255,.14)" stroke-width="1"/>
+        <line x1="55" y1="30" x2="55" y2="235" stroke="rgba(255,255,255,.14)" stroke-width="1"/>
+        <!-- rest-energy marker -->
+        <line x1="452" y1="40" x2="452" y2="235" stroke="rgba(91,200,245,.35)" stroke-width="1" stroke-dasharray="3 4"/>
+        <text x="458" y="52" fill="#5bc8f5" font-family="JetBrains Mono, monospace" font-size="11">6.4 keV</text>
+        <!-- profile fill -->
+        <path d="M70,233 C150,228 215,210 285,178 C345,150 400,108 440,78 L452,70 L460,96 L468,180 L474,233 Z" fill="url(#fill)"/>
+        <!-- profile curve -->
+        <path class="lp-curve lp-draw" d="M70,233 C150,228 215,210 285,178 C345,150 400,108 440,78 L452,70 L460,96 L468,180 L474,233"/>
+        <!-- labels -->
+        <text x="120" y="222" fill="#5f6e85" font-family="JetBrains Mono, monospace" font-size="10.5">red wing</text>
+        <text x="395" y="62" fill="#caa531" font-family="JetBrains Mono, monospace" font-size="10.5">blue horn</text>
+        <text x="300" y="262" fill="#5f6e85" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">Energy →</text>
+      </svg>
+      <div class="cap">Gravitationally broadened Fe Kα line — the diagnostic Kalpha is built around.</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="stats reveal">
+      <div class="cell"><div class="num">~1,900</div><div class="lbl">A<sub>Fe</sub> fits catalogued across XRB &amp; AGN</div></div>
+      <div class="cell"><div class="num">RELXILL</div><div class="lbl">Family of reflection models, all variants tracked</div></div>
+      <div class="cell"><div class="num">Live</div><div class="lbl">Queryable through an MCP server &amp; tools</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- WHY -->
+<section id="why">
+  <div class="wrap">
+    <div class="eyebrow reveal">The problem</div>
+    <h2 class="reveal" style="margin:.5rem 0 1.2rem;max-width:18ch">Iron abundance is the field's loudest systematic.</h2>
+    <div class="twocol">
+      <div class="reveal">
+        <p class="lead">Reflection fits routinely return iron abundances scattered from sub-solar to ten times solar — for the <em>same</em> sources. The spread is driven not by astrophysics alone but by choices: model variant, coronal geometry, disk density, and instrument.</p>
+        <p class="lead" style="margin-top:1rem">When a parameter that should be roughly universal varies by an order of magnitude across the literature, that scatter <em>is</em> the result worth studying. But it can only be studied population-wide if the values are gathered consistently.</p>
+      </div>
+      <div class="reveal">
+        <div class="note">
+          <b>Why a database, not a review table.</b> In the spirit of García et al. (2018) Fig. 3, Kalpha records every published A<sub>Fe</sub> with its full context — variant, instrument, whether the value was free, fixed, or pegged at the model boundary — so any subset can be re-queried and re-plotted. The plot below is generated live from that catalogue, not redrawn by hand.
+        </div>
+        <div class="note" style="margin-top:1rem">
+          <b>Beyond iron.</b> The same machinery catalogues reflection-based <b>black-hole spin</b> measurements with a quality-tiered curation scheme, building a census for population and systematics studies.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXPLORE (centerpiece) -->
+<section id="explore">
+  <div class="wrap">
+    <div class="eyebrow reveal">The centerpiece</div>
+    <h2 class="reveal" style="margin:.5rem 0 1rem">XRB vs AGN iron abundance, live from Kalpha</h2>
+    <p class="lead reveal">Free fits include values the optimizer drove to the model boundary (shown as pegged/limit); fixed fits are frozen at a chosen value, off by default. The statistics recompute for whichever sample the toggles select — exact per-sample values from the database, not binned estimates. Watch the AGN median collapse to solar when fixed values are shown: hundreds of AGN fits freeze A<sub>Fe</sub> at 1× solar.</p>
+
+    <div class="panel reveal">
+      <div class="cards">
+        <div class="stat"><div class="t">XRB median</div><div class="v vXRB" id="xrbMed">—</div><div class="s" id="xrbN">—</div></div>
+        <div class="stat"><div class="t">XRB mean ± σ</div><div class="v vXRB" id="xrbMean">—</div><div class="s" id="xrbIqr">—</div></div>
+        <div class="stat"><div class="t">AGN median</div><div class="v vAGN" id="agnMed">—</div><div class="s" id="agnN">—</div></div>
+        <div class="stat"><div class="t">AGN mean ± σ</div><div class="v vAGN" id="agnMean">—</div><div class="s" id="agnIqr">—</div></div>
+      </div>
+      <div class="samplenote" id="sampleNote">—</div>
+
+      <div class="controls">
+        <div class="seg"><button id="bH" onclick="setMode('hist')">Histogram</button><button id="bE" onclick="setMode('ecdf')">ECDF</button></div>
+        <div class="seg"><button id="bCn" onclick="setNorm(false)">Count</button><button id="bFr" onclick="setNorm(true)">Fraction</button></div>
+        <label class="chk"><input type="checkbox" id="cLim" checked onchange="setLim(this.checked)"> limit / pegged</label>
+        <label class="chk"><input type="checkbox" id="cFix" onchange="setFix(this.checked)"> fixed fits</label>
+      </div>
+
+      <div class="legend">
+        <span><span class="sw" style="background:#f59e0b"></span>XRB free</span>
+        <span><span class="sw" style="background:rgba(245,158,11,.38);border:1px dashed #f59e0b"></span>XRB pegged</span>
+        <span id="lgXFix"><span class="sw" style="background:rgba(245,158,11,.16);border:1px dotted #f59e0b"></span>XRB fixed</span>
+        <span><span class="sw" style="background:#0ea5e9"></span>AGN free</span>
+        <span><span class="sw" style="background:rgba(14,165,233,.38);border:1px dashed #0ea5e9"></span>AGN pegged</span>
+        <span id="lgAFix"><span class="sw" style="background:rgba(14,165,233,.16);border:1px dotted #0ea5e9"></span>AGN fixed</span>
+      </div>
+
+      <div class="chartbox"><canvas id="ch"></canvas></div>
+      <p class="foot">A<sub>Fe</sub> in solar units; bin width 0.5; A<sub>Fe</sub> &gt; 12 excluded. "Pegged/limit" = struck the model boundary (0.5 / 10 ×☉) or reported as a limit.</p>
+      <p id="stamp"></p>
+    </div>
+  </div>
+</section>
+
+<!-- BUILD / ARCHITECTURE -->
+<section id="build">
+  <div class="wrap">
+    <div class="eyebrow reveal">How it's built</div>
+    <h2 class="reveal" style="margin:.5rem 0 1rem">From PDF to queryable catalogue</h2>
+    <p class="lead reveal">A systematic, PRISMA-style pipeline turns refereed reflection papers into one normalized table, then serves it through a programmable interface.</p>
+
+    <div class="steps reveal">
+      <div class="step"><div class="n">01</div><h3>Discover</h3><p>Refereed RELXILL-family papers identified through NASA ADS.</p></div>
+      <div class="step"><div class="n">02</div><h3>Extract</h3><p>AI-assisted parsing of each PDF — A<sub>Fe</sub>, spin, variant, instrument, fit flags — with the exact table/column recorded as provenance.</p></div>
+      <div class="step"><div class="n">03</div><h3>Curate</h3><p>Expert review and quality tiering; bibcode and value corrections logged, not silently overwritten.</p></div>
+      <div class="step"><div class="n">04</div><h3>Merge</h3><p>Per-paper JSON consolidated into <code>literature.csv</code> / <code>.json</code>.</p></div>
+      <div class="step"><div class="n">05</div><h3>Serve</h3><p>Exposed as an MCP server with query, statistics, and plotting tools.</p></div>
+    </div>
+
+    <h3 class="reveal" style="margin-top:3rem;font-size:1.2rem">The tools</h3>
+    <div class="tools reveal">
+      <div class="tool"><code>search_literature</code><p>Filter fits by source, class, model variant, instrument, year, and A<sub>Fe</sub> range.</p></div>
+      <div class="tool"><code>compute_literature_statistics</code><p>Median, mean, quartiles and counts over any filtered subset.</p></div>
+      <div class="tool"><code>generate_iron_histogram</code><p>The A<sub>Fe</sub> distribution that powers the plot above — faceted by class, instrument, or variant.</p></div>
+      <div class="tool"><code>semantic_search</code><p>Meaning-based retrieval across analyzed papers, via Voyage AI embeddings.</p></div>
+      <div class="tool"><code>find_fe_abundance_patterns</code><p>Heuristic A<sub>Fe</sub> extraction from a paper's text during ingestion.</p></div>
+      <div class="tool" style="border-style:dashed"><code>+ schema in progress</code><p>Electron density (log n<sub>e</sub>) and per-fit QC tiers are being folded into the schema.</p></div>
+    </div>
+
+    <h3 class="reveal" style="margin-top:3rem;font-size:1.2rem">What a row records</h3>
+    <table class="reveal">
+      <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>source_name</code></td><td>Astrophysical source (e.g. MAXI J1820+070, MCG−06−30−15)</td></tr>
+        <tr><td><code>class</code></td><td>XRB or AGN</td></tr>
+        <tr><td><code>relxill_variant</code></td><td>relxill, relxilllp, relxillD, relxillCp, xillver, _nk …</td></tr>
+        <tr><td><code>instrument</code></td><td>NuSTAR, NICER, XMM-Newton, RXTE, Insight-HXMT …</td></tr>
+        <tr><td><code>A_Fe</code> (+err)</td><td>Iron abundance in solar units, with uncertainties</td></tr>
+        <tr><td><code>A_Fe_is_fixed</code> / <code>_is_limit</code></td><td>Whether the value was frozen, or pegged / reported as a limit</td></tr>
+        <tr><td><code>spin</code></td><td>Reflection-based black-hole spin, where reported</td></tr>
+        <tr><td><code>bibcode</code> / <code>source_location</code></td><td>ADS bibcode and the exact table/column the value came from</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- CONNECT -->
+<section id="connect">
+  <div class="wrap">
+    <div class="eyebrow reveal">Use it</div>
+    <h2 class="reveal" style="margin:.5rem 0 1rem">Query Kalpha yourself</h2>
+    <div class="twocol">
+      <div class="reveal">
+        <p class="lead">Kalpha speaks the Model Context Protocol. Add it as a connector in a compatible client and ask questions in plain language, or drive the tools directly through the API.</p>
+        <p style="margin-top:1.2rem;color:var(--muted);font-size:.9rem">MCP endpoint</p>
+        <p class="endpoint">https://kalpha-production.up.railway.app/mcp</p>
+        <p style="margin-top:1.4rem;color:var(--muted);font-size:.9rem">This site refreshes its plot from that same server. The included <code style="font-family:var(--mono);color:var(--cyan)">kalpha_afe.py</code> regenerates <code style="font-family:var(--mono);color:var(--cyan)">afe_data.json</code>; a scheduled GitHub Action can keep it current.</p>
+      </div>
+      <div class="reveal">
+        <pre><code class="block"># Refresh the catalogue snapshot behind the plot
+pip install "mcp>=1.0"
+python kalpha_afe.py            # writes afe_data.json
+python kalpha_afe.py --serve    # view the live plot locally
+python kalpha_afe.py --png      # export a publication figure
+
+# Example questions once connected in an MCP client:
+#   "median A_Fe for free NuSTAR fits of AGN"
+#   "histogram of A_Fe for MAXI J1820+070"
+#   "all relxillCp spin measurements above 0.9"</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section id="team">
+  <div class="wrap">
+    <div class="eyebrow reveal">Who builds it</div>
+    <h2 class="reveal" style="margin:.5rem 0 .5rem">The people behind Kalpha</h2>
+    <div class="people reveal">
+      <div class="person">
+        <div class="nm">Javier García</div>
+        <div class="rl">NASA GSFC · Caltech</div>
+        <p>Lead developer of the RELXILL / XILLVER reflection models. Kalpha grew out of the need to study iron-abundance and spin systematics across the literature those models produced.</p>
+      </div>
+      <div class="person">
+        <div class="nm">Juan González</div>
+        <div class="rl">Database architect</div>
+        <p>Builds and maintains the Kalpha database, extraction pipeline, and MCP server — the infrastructure that keeps the catalogue queryable and current.</p>
+      </div>
+    </div>
+    <p style="margin-top:1.6rem;color:var(--faint);font-size:.85rem">Part of the RELXILL / XILLVER ecosystem for X-ray reflection spectroscopy.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>Kalpha — Fe Kα reflection-literature census</div>
+    <div><a href="#" id="ghBottom">GitHub repository</a> · <a href="https://kalpha-production.up.railway.app/mcp">MCP endpoint</a></div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+/* ---- set GitHub links (replace USERNAME after you create the repo) ---- */
+const REPO_URL="https://github.com/USERNAME/kalpha-site";
+["ghTop","ghHero","ghBottom"].forEach(id=>{const e=document.getElementById(id);if(e)e.href=REPO_URL;});
+
+/* ---- scroll reveal ---- */
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* ============================ HISTOGRAM ============================ */
+const SEED={
+  generated_utc:"seed (current snapshot from Kalpha)",
+  classes:{
+    xrb:{n_limit:228,n_fixed:144,
+      stats:{free:{n:703,median:3.1,mean:3.42,std:2.39,q1:1.31,q3:4.97},free_limit:{n:931,median:3.4,mean:4.08,std:3.17,q1:1.17,q3:6.0},free_fixed:{n:838,median:2.82,mean:3.23,std:2.35,q1:1.0,q3:4.97},all:{n:1075,median:3.14,mean:3.86,std:3.11,q1:1.0,q3:5.2}},
+      bins:[[0.5,119,78,9],[1.0,70,0,77],[1.5,65,0,7],[2.0,47,0,2],[2.5,35,1,2],[3.0,50,0,5],[3.5,56,0,2],[4.0,47,1,1],[4.5,38,4,0],[5.0,59,5,33],[5.5,11,0,0],[6.0,15,6,0],[6.5,13,2,2],[7.0,13,3,0],[7.5,16,2,0],[8.0,10,9,0],[8.5,9,7,0],[9.0,14,11,0],[9.5,13,33,0],[10.0,0,66,4]]},
+    agn:{n_limit:132,n_fixed:290,
+      stats:{free:{n:397,median:2.18,mean:2.39,std:1.49,q1:1.01,q3:3.14},free_limit:{n:529,median:2.2,mean:2.80,std:2.33,q1:0.9,q3:3.7},free_fixed:{n:681,median:1.0,mean:1.93,std:1.43,q1:1.0,q3:2.8},all:{n:819,median:1.0,mean:2.26,std:2.10,q1:1.0,q3:3.0}},
+      bins:[[0.5,89,52,15],[1.0,44,7,251],[1.5,45,3,1],[2.0,39,4,0],[2.5,51,2,2],[3.0,47,2,4],[3.5,21,4,1],[4.0,19,6,0],[4.5,15,1,4],[5.0,14,3,8],[5.5,3,0,0],[6.0,3,1,1],[6.5,2,2,3],[7.0,0,8,0],[7.5,0,5,0],[8.0,2,8,0],[8.5,0,4,0],[9.0,0,8,0],[9.5,1,4,0],[10.0,0,8,0]]}
+  }
+};
+let D=SEED.classes, LABS=D.xrb.bins.map(b=>b[0].toFixed(1));
+const XC='#f59e0b',XL='rgba(245,158,11,.38)',XF='rgba(245,158,11,.16)';
+const AC='#0ea5e9',AL='rgba(14,165,233,.38)',AF='rgba(14,165,233,.16)';
+let mode='hist',norm=false,lim=true,fix=false,chart=null;
+
+function statKey(){return lim?(fix?'all':'free_limit'):(fix?'free_fixed':'free');}
+const SAMPLE_LABEL={free:'free fits, pegged excluded',free_limit:'free fits, incl. pegged',free_fixed:'free (no pegged) + fixed',all:'free (incl. pegged) + fixed'};
+
+function fmtCards(){
+  const k=statKey(),sx=D.xrb.stats[k],sa=D.agn.stats[k];
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('xrbMed',sx.median.toFixed(1)+' ×☉');set('xrbN','n = '+sx.n.toLocaleString()+' fits');
+  set('xrbMean',sx.mean.toFixed(2)+' ± '+sx.std.toFixed(2));set('xrbIqr','IQR '+sx.q1.toFixed(2)+' – '+sx.q3.toFixed(2));
+  set('agnMed',sa.median.toFixed(1)+' ×☉');set('agnN','n = '+sa.n.toLocaleString()+' fits');
+  set('agnMean',sa.mean.toFixed(2)+' ± '+sa.std.toFixed(2));set('agnIqr','IQR '+sa.q1.toFixed(2)+' – '+sa.q3.toFixed(2));
+  set('sampleNote','Statistics for: '+SAMPLE_LABEL[k]+'.');
+}
+function setBtns(){
+  [['bH',mode==='hist'],['bE',mode==='ecdf'],['bCn',!norm],['bFr',norm]].forEach(([id,on])=>{
+    const e=document.getElementById(id);if(e)e.classList.toggle('on',on);
+  });
+  ['lgXFix','lgAFix'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.opacity=fix?'1':'.4';});
+}
+function segs(o){
+  const free=o.bins.map(b=>b[1]),lm=o.bins.map(b=>lim?b[2]:0),fx=o.bins.map(b=>fix?b[3]:0);
+  const total=o.bins.reduce((s,b)=>s+b[1]+(lim?b[2]:0)+(fix?b[3]:0),0)||1;
+  return {free,lm,fx,total};
+}
+function build(){
+  const ctx=document.getElementById('ch').getContext('2d');
+  const gc='rgba(255,255,255,.07)',tc='#93a3ba';
+  const sx=segs(D.xrb),sa=segs(D.agn);
+  let type,datasets,scales,tip;
+  if(mode==='hist'){
+    type='bar';
+    const dn=(a,t)=>a.map(v=>v/(norm?t:1));
+    const cp={categoryPercentage:.85,barPercentage:.92};
+    const mk=(s,stk,sc,lc,fc)=>[
+      {label:stk.toUpperCase(),data:dn(s.free,s.total),backgroundColor:sc,stack:stk,...cp},
+      {label:stk.toUpperCase()+' limit',data:dn(s.lm,s.total),backgroundColor:lc,borderColor:sc,borderWidth:1,stack:stk,...cp},
+      {label:stk.toUpperCase()+' fixed',data:dn(s.fx,s.total),backgroundColor:fc,borderColor:sc,borderWidth:1,borderDash:[2,2],stack:stk,...cp}
+    ];
+    datasets=[...mk(sx,'xrb',XC,XL,XF),...mk(sa,'agn',AC,AL,AF)];
+    scales={x:{grid:{color:gc},ticks:{color:tc,font:{size:11},maxTicksLimit:11,autoSkip:true,maxRotation:0},title:{display:true,text:'A_Fe (× solar)',color:tc,font:{size:12}}},
+      y:{stacked:true,grid:{color:gc},ticks:{color:tc,font:{size:11},callback:v=>norm?(v*100).toFixed(1)+'%':v},title:{display:true,text:norm?'Fraction of fits':'Fit count',color:tc,font:{size:12}}}};
+    tip={callbacks:{title:c=>`A_Fe = ${c[0].label} – ${(+c[0].label+0.5).toFixed(1)} × ☉`,label:c=>` ${c.dataset.label}: ${norm?(c.raw*100).toFixed(2)+'%':Math.round(c.raw)}`}};
+  }else{
+    type='line';
+    const ecdf=(s)=>{let a=0;return s.free.map((f,i)=>{a+=f+s.lm[i]+s.fx[i];return norm?a/s.total:a;});};
+    datasets=[{label:'XRB',data:ecdf(sx),borderColor:XC,backgroundColor:'transparent',stepped:'after',pointRadius:0,borderWidth:2.5},
+      {label:'AGN',data:ecdf(sa),borderColor:AC,backgroundColor:'transparent',stepped:'after',pointRadius:0,borderWidth:2.5}];
+    scales={x:{grid:{color:gc},ticks:{color:tc,font:{size:11},maxTicksLimit:11,maxRotation:0},title:{display:true,text:'A_Fe (× solar)',color:tc,font:{size:12}}},
+      y:{min:0,grid:{color:gc},ticks:{color:tc,font:{size:11},callback:v=>norm?(v*100).toFixed(0)+'%':v},title:{display:true,text:norm?'Cumulative fraction':'Cumulative count',color:tc,font:{size:12}}}};
+    tip={callbacks:{title:c=>`A_Fe up to ${(+c[0].label+0.5).toFixed(1)} × ☉`,label:c=>` ${c.dataset.label}: ${norm?(c.raw*100).toFixed(1)+'%':Math.round(c.raw)}`}};
+  }
+  if(chart)chart.destroy();
+  chart=new Chart(ctx,{type,data:{labels:LABS,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tip},scales,animation:{duration:220}}});
+}
+function refresh(){fmtCards();setBtns();build();}
+function setMode(m){mode=m;setBtns();build();}
+function setNorm(n){norm=n;setBtns();build();}
+function setLim(v){lim=v;refresh();}
+function setFix(v){fix=v;refresh();}
+function applyData(o){if(!o||!o.classes||!o.classes.xrb||!o.classes.agn)return;D=o.classes;LABS=D.xrb.bins.map(b=>b[0].toFixed(1));const s=document.getElementById('stamp');if(s&&o.generated_utc)s.textContent='Data: '+o.generated_utc;refresh();}
+refresh();
+fetch('afe_data.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j)applyData(j);}).catch(()=>{});
+</script>
+</body>
+</html>

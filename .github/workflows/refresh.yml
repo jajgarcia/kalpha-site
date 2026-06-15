@@ -1,0 +1,26 @@
+name: refresh-afe-data
+on:
+  schedule:
+    - cron: "0 6 * * 1"      # every Monday 06:00 UTC
+  workflow_dispatch:
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "mcp>=1.0"
+      - run: python kalpha_afe.py --out afe_data.json
+        # If the Kalpha server needs auth, store a token as a repo secret and use:
+        # run: python kalpha_afe.py --out afe_data.json --header "Authorization: Bearer ${{ secrets.KALPHA_TOKEN }}"
+      - name: Commit refreshed data
+        run: |
+          git config user.name  "kalpha-bot"
+          git config user.email "kalpha-bot@users.noreply.github.com"
+          git add afe_data.json
+          git diff --cached --quiet || git commit -m "refresh A_Fe data"
+          git push

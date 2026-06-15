@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+afe_distribution.png
+afe_distribution.pdf
+.DS_Store
