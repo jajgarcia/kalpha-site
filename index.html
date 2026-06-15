@@ -104,6 +104,8 @@
   .legend span{display:flex;align-items:center;gap:5px}
   .sw{width:12px;height:12px;border-radius:2px;display:inline-block}
   .chartbox{position:relative;width:100%;height:380px}
+  .chartcap{font-size:13px;color:var(--muted);line-height:1.6;margin-top:1rem;padding-left:.9rem;border-left:2px solid var(--cyan);max-width:74ch}
+  .chartcap b{color:var(--text);font-weight:600}
   .foot{font-size:11px;color:var(--faint);margin-top:.9rem;line-height:1.6}
   #stamp{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:.5rem}
 
@@ -269,6 +271,7 @@
       </div>
 
       <div class="chartbox"><canvas id="ch"></canvas></div>
+      <p class="chartcap" id="chartCap"></p>
       <p class="foot">A<sub>Fe</sub> in solar units; bin width 0.5; A<sub>Fe</sub> &gt; 12 excluded. "Pegged/limit" = struck the model boundary (0.5 / 10 ×☉) or reported as a limit.</p>
       <p id="stamp"></p>
     </div>
@@ -453,9 +456,21 @@ function build(){
   if(chart)chart.destroy();
   chart=new Chart(ctx,{type,data:{labels:LABS,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tip},scales,animation:{duration:220}}});
 }
-function refresh(){fmtCards();setBtns();build();}
-function setMode(m){mode=m;setBtns();build();}
-function setNorm(n){norm=n;setBtns();build();}
+function captionText(){
+  if(mode==='hist'){
+    return norm
+      ? "<b>Histogram · Fraction.</b> Each class is normalized to its own total, so every bar shows the share of <i>that class's</i> fits in the bin and each distribution sums to 100%. This removes the ~2:1 difference in sample size, letting you compare the two shapes directly — e.g. AGN concentrate a larger share near solar, XRB carry more weight out to high A_Fe."
+      : "<b>Histogram · Count.</b> Bars show the raw number of fits in each 0.5-solar A_Fe bin. Both classes share one absolute scale, so the larger XRB sample reads taller across the range; this view shows how many measurements there are, not how the shapes compare.";
+  }
+  return norm
+    ? "<b>ECDF · Fraction.</b> The empirical cumulative distribution: the running share of each class's fits with A_Fe at or below each value, rising from 0 to 100%. Where a curve crosses 50% marks that class's median, and the horizontal gap between the curves shows how offset XRB and AGN are."
+    : "<b>ECDF · Count.</b> The empirical cumulative distribution in absolute terms: the running number of fits with A_Fe at or below each value. Each curve steps up bin by bin to its class total, so the curves end at different heights set by sample size.";
+}
+function setCap(){const e=document.getElementById('chartCap');if(e)e.innerHTML=captionText();}
+
+function refresh(){fmtCards();setBtns();setCap();build();}
+function setMode(m){mode=m;setBtns();setCap();build();}
+function setNorm(n){norm=n;setBtns();setCap();build();}
 function setLim(v){lim=v;refresh();}
 function setFix(v){fix=v;refresh();}
 function applyData(o){if(!o||!o.classes||!o.classes.xrb||!o.classes.agn)return;D=o.classes;LABS=D.xrb.bins.map(b=>b[0].toFixed(1));const s=document.getElementById('stamp');if(s&&o.generated_utc)s.textContent='Data: '+o.generated_utc;refresh();}
